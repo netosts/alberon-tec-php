@@ -13,16 +13,6 @@ class ContactService implements Contracts\IContactService
 {
   public function __construct(protected IContactRepository $contactRepository) {}
 
-  private const EXPECTED_COLUMNS = ['name', 'email', 'phone', 'birthdate'];
-  private const REQUIRED_FIELDS = ['name', 'email'];
-
-  private const VALIDATION_RULES = [
-    'name' => 'required|string|max:255',
-    'email' => 'required|email|max:255',
-    'phone' => 'nullable|string|max:50',
-    'birthdate' => 'nullable|date',
-  ];
-
   public function getContactsPaginated(Request $request)
   {
     return Contact::paginate(15);
@@ -35,20 +25,27 @@ class ContactService implements Contracts\IContactService
     }
 
     $file = $request->file('file');
-    $stats = $this->processCsvFile($file);
+
+    $csvValidationRules = [
+      'name' => ['required', 'string', 'max:255'],
+      'email' => ['required', 'email', 'max:255'],
+      'phone' => ['nullable', 'string', 'max:50'],
+      'birthdate' => ['nullable', 'date'],
+    ];
+
+    $stats = $this->_processContactCsvFile($file, $csvValidationRules);
 
     return $stats;
   }
 
-  private function processCsvFile(UploadedFile $file): array
+  private function _processContactCsvFile(UploadedFile $file, $validationRules = []): array
   {
-    // Parse CSV file
+    $expectedColumns = array_keys($validationRules);
+
     $csvData = CsvHelper::parse($file->getRealPath());
 
-    // Map columns
-    $columnMap = CsvHelper::mapColumns($csvData['header'], self::EXPECTED_COLUMNS);
+    $columnMap = CsvHelper::mapColumns($csvData['header'], $expectedColumns);
 
-    // Initialize stats
     $stats = [
       'total_rows' => 0,
       'imported' => 0,
@@ -56,20 +53,14 @@ class ContactService implements Contracts\IContactService
       'errors' => 0,
     ];
 
-    // Process each row
     foreach ($csvData['rows'] as $row) {
       $stats['total_rows']++;
 
       // Extract data from row
-      $data = CsvHelper::extractData($row, $columnMap, self::REQUIRED_FIELDS);
-
-      if (!$data) {
-        $stats['errors']++;
-        continue;
-      }
+      $data = CsvHelper::extractData($row, $columnMap);
 
       // Validate data
-      $validation = ValidationHelper::validate($data, self::VALIDATION_RULES);
+      $validation = ValidationHelper::validate($data, $validationRules);
 
       if (!$validation['valid']) {
         $stats['errors']++;

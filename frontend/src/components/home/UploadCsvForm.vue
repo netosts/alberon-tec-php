@@ -122,6 +122,7 @@ const processFile = () => {
   uploadCsvContactService(formData)
     .then(({ data: { data } }) => {
       alert('File processed successfully!')
+      resetForm()
       emit('onUpload', data)
     })
     .catch(() => {

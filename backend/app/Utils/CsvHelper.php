@@ -54,15 +54,8 @@ class CsvHelper
   /**
    * Extract data from a CSV row using column map
    */
-  public static function extractData(array $row, array $columnMap, array $requiredFields = []): ?array
+  public static function extractData(array $row, array $columnMap): array
   {
-    // Check if required fields exist in column map
-    foreach ($requiredFields as $field) {
-      if (!isset($columnMap[$field])) {
-        return null;
-      }
-    }
-
     $data = [];
     foreach ($columnMap as $field => $index) {
       $data[$field] = $row[$index] ?? null;

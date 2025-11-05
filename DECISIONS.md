@@ -3,6 +3,7 @@
 1 - Opted to use Laravel Sail for faster local development setup
 2 - I was conflicted about how to deal with icons in frontend. Decided to create a global component to handle SVG icons.
 This way, i can easily add more icons in the future without dependencies and it's easier to change icon providers since they are all svg based.
+3 - Decided to create one instance of axios so i can easily change the requests configuration in one place if needed.
 
 ## Architecture Choices
 

@@ -7,12 +7,14 @@ const router = createRouter({
       path: '/',
       name: 'HomeIndex',
       component: () => import('../views/HomeIndex.vue'),
+      meta: { layout: 'HomeLayout' },
     },
-    // {
-    //   path: '/test',
-    //   name: 'TestIndex',
-    //   component: () => import('../views/TestIndex.vue'),
-    // },
+    {
+      path: '/test',
+      name: 'TestIndex',
+      component: () => import('../views/TestIndex.vue'),
+      meta: { layout: 'HomeLayout' },
+    },
   ],
 })
 

@@ -21,19 +21,7 @@
             : 'border-slate-600 bg-slate-700/30 hover:border-slate-500',
         ]"
       >
-        <svg
-          class="mx-auto mb-4 h-12 w-12 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-          />
-        </svg>
+        <Icon name="cloud-up" class="text-slate-400 mb-4" size="w-16 h-16" />
         <p class="mb-2 text-white font-semibold">Drag and drop your CSV file here</p>
         <p class="mb-4 text-sm text-slate-400">or click to select</p>
         <input
@@ -79,14 +67,7 @@
       >
         <span v-if="!processing">Process File</span>
         <span v-else class="flex items-center justify-center gap-2">
-          <svg class="h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
+          <Icon name="loader-2" class="animate-spin" />
           Processing...
         </span>
       </button>
@@ -97,6 +78,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Icon from '../Icon.vue'
+import { uploadCsvContactService } from '@/services/home/homeApi'
+
+const emit = defineEmits<{
+  onUpload: [data: any]
+}>()
 
 const selectedFile = ref<File | null>(null)
 const dragging = ref(false)
@@ -122,6 +108,28 @@ const handleDrop = (event: DragEvent) => {
 const resetForm = () => {
   selectedFile.value = null
   processing.value = false
+}
+
+const processFile = () => {
+  if (!selectedFile.value) return
+
+  processing.value = true
+
+  const formData = new FormData()
+  formData.append('file', selectedFile.value)
+  formData.append('_method', 'PUT')
+
+  uploadCsvContactService(formData)
+    .then(({ data: { data } }) => {
+      alert('File processed successfully!')
+      emit('onUpload', data)
+    })
+    .catch(() => {
+      alert('Error processing file. Please try again.')
+    })
+    .finally(() => {
+      processing.value = false
+    })
 }
 </script>
 

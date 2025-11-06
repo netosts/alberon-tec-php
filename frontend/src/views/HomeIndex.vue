@@ -1,30 +1,38 @@
 <template>
   <div class="space-y-8">
-    <UploadCsvForm @onUpload="showResults" />
+    <UploadCsvForm v-if="status === CsvImportStatus.IDLE" @onUpload="showResults" />
 
-    <ContactImportSummary v-if="results.summary.total_rows > 0" :summary="results.summary" />
+    <ContactImportSummary
+      v-else
+      :status="status"
+      :progress="progress"
+      :stats="stats"
+      :processedChunks="processedChunks"
+      :totalChunks="totalChunks"
+      @reset="reset"
+    />
 
-    <ContactPagination />
+    <ContactPagination :status="status" />
   </div>
 </template>
 
 <script setup lang="ts">
-import ContactImportSummary from '@/components/home/ContactImportSummary.vue'
-import ContactPagination from '@/components/home/ContactPagination.vue'
-import UploadCsvForm from '@/components/home/UploadCsvForm.vue'
-import { ref } from 'vue'
+import ContactImportSummary from '@/components/contact/ContactImportSummary.vue'
+import ContactPagination from '@/components/contact/ContactPagination.vue'
+import UploadCsvForm from '@/components/contact/UploadCsvForm.vue'
+import { useCsvImport } from '@/composables/useCsvImport'
+import { CsvImportStatus } from '@/enums/csv-import.enum'
 
-const results = ref<any>({
-  summary: {
-    total_rows: 0,
-    imported: 0,
-    duplicates: 0,
-    errors: 0,
-  },
-})
+const { progress, stats, status, subscribeToImport, processedChunks, totalChunks, reset } =
+  useCsvImport()
 
-const showResults = (newResults: any) => {
-  results.value.summary = newResults
+const showResults = (data: any) => {
+  status.value = CsvImportStatus.PROCESSING
+  progress.value = 0
+  // Subscribe immediately when we get the import_id
+  if (data.import_id) {
+    subscribeToImport(data.import_id)
+  }
 }
 </script>
 

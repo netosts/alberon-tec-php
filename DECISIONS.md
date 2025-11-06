@@ -4,56 +4,35 @@
 2 - I was conflicted about how to deal with icons in frontend. Decided to create a global component to handle SVG icons.
 This way, i can easily add more icons in the future without dependencies and it's easier to change icon providers since they are all svg based.
 3 - Decided to create one instance of axios so i can easily change the requests configuration in one place if needed.
+4 - Decided to use Queues for processing CSV files to avoid blocking the main thread when uploading large files and improve user experience.
+5 - Chose websockets for real-time progress updates instead of polling for better user experience.
+6 - While choosing chunk size for CSV processing, I balanced between memory usage and job overhead, settling on 50 rows per chunk for optimal performance.
+7 - Decided to use Laravel Reverb instead of Pusher for WebSocket implementation to avoid third-party dependencies for easier application startup.
+8 - Created one ContactImportSummary component to handle the display of import summary details instead of splitting it into smaller components to improve user experience despite of making the code more complex to maintain.
 
-## Architecture Choices
+## Authentication
 
-**1. Simple Synchronous Processing**
+No authentication implemented. The test requirements focus on CSV
+processing functionality, not user management. This keeps the solution
+simple and aligned with evaluation criteria.
 
-- CSV processing happens synchronously during the upload request
-- Rationale: Keeps the initial implementation simple (YAGNI principle)
-- For production with large files, move to queued jobs with progress tracking
+## Queue Processing
 
-**2. Email as Unique Identifier**
+Implemented Laravel Events, Listeners, and Jobs to process CSV files
+asynchronously in 50-row chunks. This provides:
 
-- Database unique constraint on email field
-- Rationale: Business requirement for deduplication
-- Prevents race conditions and ensures data integrity
+- Non-blocking uploads (immediate response)
+- Scalability (handles 1M+ rows)
+- Fault tolerance (automatic retries)
+- Memory efficiency (constant memory usage)
 
-**3. Column Order Flexibility**
+## Why Chunks of 50?
 
-- Dynamic column mapping by reading CSV headers
-- Rationale: Requirement states "column order may vary"
-- Implementation: `mapColumns()` method normalizes header names
+Balance between:
 
-**4. Client-Side MD5 Implementation**
-
-- Custom MD5 implementation for Gravatar hashes
-- Rationale: Avoid adding npm dependencies for a simple hashing need
-- Trade-off: More code, but zero external dependencies
-
-**5. Tailwind CSS for Styling**
-
-- Utility-first CSS framework
-- Rationale: User requested Tailwind specifically
-- Benefits: Fast development, consistent design, small bundle size
-
-**6. API-First Architecture**
-
-- Backend exposes RESTful API endpoints
-- Frontend is a separate SPA
-- Rationale: Better separation of concerns, easier to scale/maintain
-
-**7. Laravel's Built-in Validation**
-
-- Using Laravel's validator for contact data
-- Rationale: Battle-tested, consistent error handling
-- DRY: Reuses framework capabilities instead of custom validation
-
-**8. Simple Error Handling**
-
-- Basic try-catch with user-friendly messages
-- Rationale: YAGNI - elaborate error tracking can be added later
-- Good enough for MVP while keeping code simple
+- Too small: More overhead, more jobs
+- Too large: Higher memory usage, longer job duration
+  50 rows = ~4KB per job, fast processing, easy debugging
 
 ## Potential Improvements (Not Implemented)
 

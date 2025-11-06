@@ -69,12 +69,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useFormatDate } from '@/composables/useDate'
 import md5 from 'md5'
 import type { IContact } from '@/types/contact'
 import type { IPagination } from '@/types/pagination'
 import { getContactsService } from '@/services/home/homeApi'
+import { CsvImportStatus } from '@/enums/csv-import.enum'
+
+const props = defineProps<{
+  status: CsvImportStatus
+}>()
 
 defineEmits<{
   'page-change': [page: number]
@@ -134,6 +139,19 @@ const getPagination = () => {
     pagination.value = data
   })
 }
+
+watch(
+  () => props.status,
+  (newStatus) => {
+    if (newStatus === CsvImportStatus.COMPLETED) {
+      getPagination()
+    }
+  },
+)
+
+onMounted(() => {
+  getPagination()
+})
 </script>
 
 <style scoped></style>

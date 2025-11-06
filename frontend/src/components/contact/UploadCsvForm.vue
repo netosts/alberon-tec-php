@@ -32,7 +32,7 @@
           class="hidden"
         />
         <button
-          @click="$refs.fileInput.click()"
+          @click="fileInput?.click()"
           class="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white hover:bg-blue-700 transition-colors"
         >
           Select File
@@ -61,7 +61,7 @@
         :class="[
           'w-full rounded-lg py-3 font-semibold transition-all duration-200',
           selectedFile && !processing
-            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 cursor-pointer'
+            ? 'bg-linear-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 cursor-pointer'
             : 'bg-slate-700 text-slate-500 cursor-not-allowed',
         ]"
       >
@@ -86,9 +86,9 @@ const emit = defineEmits<{
 
 const selectedFile = ref<File | null>(null)
 const dragging = ref(false)
-const processing = ref(false)
+const processing = ref<boolean>(false)
 
-const fileInput = ref(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const handleFileSelect = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -121,14 +121,11 @@ const processFile = () => {
 
   uploadCsvContactService(formData)
     .then(({ data: { data } }) => {
-      alert('File processed successfully!')
       resetForm()
       emit('onUpload', data)
     })
     .catch(() => {
       alert('Error processing file. Please try again.')
-    })
-    .finally(() => {
       processing.value = false
     })
 }

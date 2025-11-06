@@ -4,18 +4,15 @@ namespace App\Services;
 
 use App\Models\Contact;
 use App\Repositories\Contracts\IContactRepository;
-use App\Utils\CsvHelper;
-use App\Utils\ValidationHelper;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 
 class ContactService implements Contracts\IContactService
 {
   public function __construct(protected IContactRepository $contactRepository) {}
 
-  public function getContactsPaginated(Request $request)
+  public function getPaginated(Request $request)
   {
-    return Contact::paginate(15);
+    return Contact::orderBy('created_at', 'desc')->paginate(15);
   }
 
   public function importContactsFromCsv(Request $request)
@@ -26,6 +23,10 @@ class ContactService implements Contracts\IContactService
 
     $file = $request->file('file');
 
+    // Store the file temporarily
+    $filePath = $file->store('csv-imports', 'local');
+    $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($filePath);
+
     $csvValidationRules = [
       'name' => ['required', 'string', 'max:255'],
       'email' => ['required', 'email', 'max:255'],
@@ -33,51 +34,23 @@ class ContactService implements Contracts\IContactService
       'birthdate' => ['nullable', 'date'],
     ];
 
-    $stats = $this->_processContactCsvFile($file, $csvValidationRules);
+    // Create import record
+    $csvImport = \App\Models\CsvImport::create([
+      'file_path' => $fullPath,
+      'status' => 'processing',
+    ]);
 
-    return $stats;
-  }
+    // Dispatch event to process CSV in background
+    \App\Events\ContactsCsvImported::dispatch(
+      $fullPath,
+      $csvValidationRules,
+      $csvImport->id
+    );
 
-  private function _processContactCsvFile(UploadedFile $file, $validationRules = []): array
-  {
-    $expectedColumns = array_keys($validationRules);
-
-    $csvData = CsvHelper::parse($file->getRealPath());
-
-    $columnMap = CsvHelper::mapColumns($csvData['header'], $expectedColumns);
-
-    $stats = [
-      'total_rows' => 0,
-      'imported' => 0,
-      'duplicates' => 0,
-      'errors' => 0,
+    return [
+      'message' => 'CSV file is being processed in the background.',
+      'status' => 'processing',
+      'import_id' => $csvImport->id
     ];
-
-    foreach ($csvData['rows'] as $row) {
-      $stats['total_rows']++;
-
-      // Extract data from row
-      $data = CsvHelper::extractData($row, $columnMap);
-
-      // Validate data
-      $validation = ValidationHelper::validate($data, $validationRules);
-
-      if (!$validation['valid']) {
-        $stats['errors']++;
-        continue;
-      }
-
-      // Check for duplicate
-      if ($this->contactRepository->isEmailDuplicate($data['email'])) {
-        $stats['duplicates']++;
-        continue;
-      }
-
-      // Create contact
-      $this->contactRepository->create($data);
-      $stats['imported']++;
-    }
-
-    return $stats;
   }
 }

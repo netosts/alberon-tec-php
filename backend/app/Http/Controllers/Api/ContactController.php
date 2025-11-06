@@ -15,7 +15,7 @@ class ContactController extends Controller
 
     public function index(Request $request)
     {
-        $contacts = $this->contactService->getContactsPaginated($request);
+        $contacts = $this->contactService->getPaginated($request);
         return response()->json([
             'error' => false,
             'message' => 'Contacts retrieved successfully.',
@@ -25,13 +25,12 @@ class ContactController extends Controller
 
     public function uploadCsv(UploadCsvRequest $request)
     {
-
-        $stats = $this->contactService->importContactsFromCsv($request);
+        $response = $this->contactService->importContactsFromCsv($request);
 
         return response()->json([
             'error' => false,
             'message' => 'Contacts imported successfully.',
-            'data' => $stats,
+            'data' => $response,
         ]);
     }
 }

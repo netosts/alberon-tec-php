@@ -28,6 +28,11 @@ class ContactRepository implements Contracts\IContactRepository
     return $contact->toArray();
   }
 
+  public function bulkInsert(array $contacts): bool
+  {
+    return $this->model->insert($contacts);
+  }
+
   public function isEmailDuplicate(string $email): bool
   {
     return $this->model->where('email', $email)->exists();

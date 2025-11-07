@@ -81,21 +81,36 @@ class ProcessContactsCsvChunk implements ShouldQueue
         // Single query to check all duplicates at once
         $existingEmails = $contactRepository->getExistingEmails($emails);
 
-        // Now process the validated data
-        foreach ($validatedData as $data) {
-            try {
-                // O(1) lookup instead of database query
-                if (isset($existingEmails[$data['email']])) {
-                    $stats['duplicates']++;
-                    continue;
-                }
+        // Prepare bulk insert data
+        $contactsToInsert = [];
+        $now = now();
 
-                $contactRepository->create([...$data, 'csv_import_id' => $this->csvImport->id]);
-                $stats['imported']++;
+        foreach ($validatedData as $data) {
+            // O(1) lookup instead of database query
+            if (isset($existingEmails[$data['email']])) {
+                $stats['duplicates']++;
+                continue;
+            }
+
+            $contactsToInsert[] = [
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'birthdate' => $data['birthdate'],
+                'csv_import_id' => $this->csvImport->id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // Bulk insert all contacts in a single query
+        if (!empty($contactsToInsert)) {
+            try {
+                $contactRepository->bulkInsert($contactsToInsert);
+                $stats['imported'] = count($contactsToInsert);
             } catch (\Exception $e) {
-                $stats['errors']++;
-                Log::error("Error creating contact in chunk {$this->chunkNumber}: {$e->getMessage()}", [
-                    'data' => $data,
+                $stats['errors'] += count($contactsToInsert);
+                Log::error("Error bulk inserting contacts in chunk {$this->chunkNumber}: {$e->getMessage()}", [
                     'exception' => $e
                 ]);
             }

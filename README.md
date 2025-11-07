@@ -30,13 +30,13 @@ A Laravel + Vue.js application for importing and managing contacts from CSV file
    composer install
    ```
 
-   Start all services with a single command:
+   Start docker services using Laravel Sail:
 
    ```bash
    ./vendor/bin/sail up -d
    ```
 
-   **Note:** The application automatically starts the queue worker and Reverb (WebSocket server) when the container starts. No need to run them separately!
+   **If you face issues with failing to bind ports, try stopping any services using those ports or change the ports in the `.env` file.**
 
    Run database migrations:
 
@@ -44,7 +44,15 @@ A Laravel + Vue.js application for importing and managing contacts from CSV file
    ./vendor/bin/sail artisan migrate
    ```
 
-   **If you face issues with failing to bind ports, try stopping any services using those ports or change the ports in the `.env` file.**
+   Now, **in different terminals**, let's start the Queue worker and Laravel Reverb:
+
+   ```bash
+   ./vendor/bin/sail artisan queue:work
+   ```
+
+   ```bash
+   ./vendor/bin/sail artisan reverb:start
+   ```
 
 3. **Frontend setup** (in a new terminal)
 

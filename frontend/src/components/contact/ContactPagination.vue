@@ -37,7 +37,7 @@
         <button
           @click="changePage(pagination.current_page - 1)"
           :disabled="pagination.current_page === 1"
-          class="rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+          class="cursor-pointer rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
@@ -47,7 +47,7 @@
             :key="page"
             @click="changePage(page)"
             :class="[
-              'rounded-lg px-3 py-2 font-semibold transition-colors',
+              'cursor-pointer rounded-lg px-3 py-2 font-semibold transition-colors',
               page === pagination.current_page
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600',
@@ -59,7 +59,7 @@
         <button
           @click="changePage(pagination.current_page + 1)"
           :disabled="pagination.current_page === pagination.last_page"
-          class="rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+          class="cursor-pointer rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>

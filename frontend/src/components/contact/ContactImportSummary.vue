@@ -23,6 +23,13 @@
       </div>
     </template>
 
+    <div v-else-if="isFailed" class="rounded-lg bg-red-900/20 border border-red-700/50 p-4 mb-6">
+      <p class="text-sm text-red-300 font-semibold mb-2">Error Details</p>
+      <p class="text-sm text-red-200">
+        Something went wrong during the import process. Please try again.
+      </p>
+    </div>
+
     <div
       v-else-if="isError && !isProcessing"
       class="rounded-lg bg-red-900/20 border border-red-700/50 p-4 mb-6"
@@ -106,11 +113,6 @@ const issueItems = ref([
     iconClass: 'text-red-400',
   },
   {
-    text: 'Ensure phone numbers are in international format (e.g., +1-555-123-4567, (555) 123-4567)',
-    iconName: 'exclamation-circle',
-    iconClass: 'text-red-400',
-  },
-  {
     text: 'Ensure birthdates are valid dates in the past (e.g., 1990-01-15)',
     iconName: 'exclamation-circle',
     iconClass: 'text-red-400',
@@ -127,6 +129,8 @@ const isError = computed(() => {
 })
 
 const isProcessing = computed(() => props.status === CsvImportStatus.PROCESSING)
+
+const isFailed = computed(() => props.status === CsvImportStatus.FAILED)
 </script>
 
 <style scoped></style>

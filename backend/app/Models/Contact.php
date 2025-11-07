@@ -14,6 +14,7 @@ class Contact extends Model
         'email',
         'phone',
         'birthdate',
+        'csv_import_id',
     ];
 
     protected $casts = [

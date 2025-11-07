@@ -41,12 +41,6 @@ class ProcessContactsCsv implements ShouldQueue
             $expectedColumns = array_keys($event->validationRules);
             $columnMap = CsvHelper::mapColumns($header, $expectedColumns);
 
-            Log::info("CSV Header and Column Map", [
-                'header' => $header,
-                'expectedColumns' => $expectedColumns,
-                'columnMap' => $columnMap
-            ]);
-
             // Count total rows and chunks
             $totalRows = 0;
             $handle = fopen($event->filePath, 'r');
@@ -68,8 +62,7 @@ class ProcessContactsCsv implements ShouldQueue
             $totalChunks = (int) ceil($totalRows / $chunkSize);
 
             // Update import record with total chunks
-            $csvImport = CsvImport::findOrFail($event->importId);
-            $csvImport->update(['total_chunks' => $totalChunks]);
+            $event->csvImport->update(['total_chunks' => $totalChunks]);
 
             // Reopen file for chunking
             $handle = fopen($event->filePath, 'r');
@@ -94,10 +87,9 @@ class ProcessContactsCsv implements ShouldQueue
                         $columnMap,
                         $event->validationRules,
                         $chunkNumber,
-                        $event->importId
+                        $event->csvImport
                     );
 
-                    Log::info("Dispatched chunk {$chunkNumber} with " . count($rows) . " rows");
                     $rows = [];
                 }
             }
@@ -110,28 +102,17 @@ class ProcessContactsCsv implements ShouldQueue
                     $columnMap,
                     $event->validationRules,
                     $chunkNumber,
-                    $event->importId
+                    $event->csvImport
                 );
-
-                Log::info("Dispatched final chunk {$chunkNumber} with " . count($rows) . " rows");
             }
 
             fclose($handle);
-
-            Log::info("CSV file chunked into {$totalChunks} chunks", [
-                'import_id' => $event->importId,
-                'file' => $event->filePath,
-                'total_chunks' => $totalChunks
-            ]);
         } catch (\Exception $e) {
-            $csvImport = CsvImport::find($event->importId);
-            if ($csvImport) {
-                $csvImport->markAsFailed();
-                broadcast(new CsvImportProgressUpdated($csvImport))->toOthers();
-            }
+            $event->csvImport->markAsFailed();
+            broadcast(new CsvImportProgressUpdated($event->csvImport))->toOthers();
 
             Log::error('Failed to process CSV file', [
-                'import_id' => $event->importId,
+                'csv_import' => $event->csvImport,
                 'error' => $e->getMessage()
             ]);
         }
@@ -142,14 +123,11 @@ class ProcessContactsCsv implements ShouldQueue
      */
     public function failed(ContactsCsvImported $event, \Throwable $exception): void
     {
-        $csvImport = CsvImport::find($event->importId);
-        if ($csvImport) {
-            $csvImport->markAsFailed();
-            broadcast(new CsvImportProgressUpdated($csvImport))->toOthers();
-        }
+        $event->csvImport->markAsFailed();
+        broadcast(new CsvImportProgressUpdated($event->csvImport))->toOthers();
 
         Log::error('Failed to process CSV file', [
-            'import_id' => $event->importId,
+            'csv_import' => $event->csvImport,
             'error' => $exception->getMessage()
         ]);
     }

@@ -9,6 +9,7 @@ use App\Utils\CsvHelper;
 use App\Utils\ValidationHelper;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -27,7 +28,7 @@ class ProcessContactsCsvChunk implements ShouldQueue
         public array $columnMap,
         public array $validationRules,
         public int $chunkNumber,
-        public int $importId
+        public CsvImport $csvImport
     ) {}
 
     /**
@@ -43,34 +44,31 @@ class ProcessContactsCsvChunk implements ShouldQueue
             'errors' => 0,
         ];
 
+        // Extract all emails from this chunk
+        $emails = [];
+        $validatedData = [];
+
         foreach ($this->rows as $row) {
             $stats['processed']++;
 
             try {
-                // Extract data from row
                 $data = CsvHelper::extractData($row, $this->columnMap);
-
-                // Validate data
                 $validation = ValidationHelper::validate($data, $this->validationRules);
 
                 if (!$validation['valid']) {
                     $stats['errors']++;
-                    Log::warning("CSV validation failed for row in chunk {$this->chunkNumber}", [
-                        'data' => $data,
-                        'errors' => $validation['errors']
-                    ]);
+                    // Only log first 10 errors per chunk to avoid log spam
+                    if ($stats['errors'] <= 10) {
+                        Log::warning("CSV validation failed for row in chunk {$this->chunkNumber}", [
+                            'data' => $data,
+                            'errors' => $validation['errors']
+                        ]);
+                    }
                     continue;
                 }
 
-                // Check for duplicate
-                if ($contactRepository->isEmailDuplicate($data['email'])) {
-                    $stats['duplicates']++;
-                    continue;
-                }
-
-                // Create contact
-                $contactRepository->create($data);
-                $stats['imported']++;
+                $emails[] = $data['email'];
+                $validatedData[] = $data;
             } catch (\Exception $e) {
                 $stats['errors']++;
                 Log::error("Error processing row in chunk {$this->chunkNumber}: {$e->getMessage()}", [
@@ -80,35 +78,59 @@ class ProcessContactsCsvChunk implements ShouldQueue
             }
         }
 
-        // Update import stats in a transaction
-        DB::transaction(function () use ($stats) {
-            $csvImport = CsvImport::lockForUpdate()->findOrFail($this->importId);
+        // Single query to check all duplicates at once
+        $existingEmails = $contactRepository->getExistingEmails($emails);
 
-            $csvImport->processed_chunks += 1;
-            $csvImport->total_rows += $stats['processed'];
-            $csvImport->imported += $stats['imported'];
-            $csvImport->duplicates += $stats['duplicates'];
-            $csvImport->errors += $stats['errors'];
+        // Now process the validated data
+        foreach ($validatedData as $data) {
+            try {
+                // O(1) lookup instead of database query
+                if (isset($existingEmails[$data['email']])) {
+                    $stats['duplicates']++;
+                    continue;
+                }
 
-            // Check if this was the last chunk
-            if ($csvImport->processed_chunks >= $csvImport->total_chunks) {
-                $csvImport->markAsCompleted();
+                $contactRepository->create([...$data, 'csv_import_id' => $this->csvImport->id]);
+                $stats['imported']++;
+            } catch (\Exception $e) {
+                $stats['errors']++;
+                Log::error("Error creating contact in chunk {$this->chunkNumber}: {$e->getMessage()}", [
+                    'data' => $data,
+                    'exception' => $e
+                ]);
+            }
+        }
+
+        // Update stats in transaction
+        $updatedImport = DB::transaction(function () use ($stats) {
+            $this->csvImport->refresh();
+            $this->csvImport->lockForUpdate();
+
+            $this->csvImport->increment('processed_chunks');
+            $this->csvImport->increment('total_rows', $stats['processed']);
+            $this->csvImport->increment('imported', $stats['imported']);
+            $this->csvImport->increment('duplicates', $stats['duplicates']);
+            $this->csvImport->increment('errors', $stats['errors']);
+
+            if ($this->csvImport->processed_chunks >= $this->csvImport->total_chunks) {
+                $this->csvImport->markAsCompleted();
+                Cache::flush();
             }
 
-            $csvImport->save();
+            $this->csvImport->save();
 
-            // Broadcast progress update via WebSocket
-            broadcast(new CsvImportProgressUpdated($csvImport))->toOthers();
-
-            Log::info("Broadcasting progress update", [
-                'chunk' => $this->chunkNumber,
-                'import_id' => $csvImport->id,
-                'progress' => $csvImport->progress,
-                'status' => $csvImport->status
-            ]);
+            return $this->csvImport->fresh(); // Return fresh model
         });
 
-        Log::info("Chunk {$this->chunkNumber} processed", $stats);
+        // Broadcast OUTSIDE transaction (non-blocking)
+        broadcast(new CsvImportProgressUpdated($updatedImport))->toOthers();
+
+
+        if ($updatedImport->status === 'completed') {
+            Log::info("CSV import completed and cache cleared", [
+                'import_id' => $updatedImport->id
+            ]);
+        }
     }
 
     /**
@@ -116,16 +138,11 @@ class ProcessContactsCsvChunk implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        DB::transaction(function () {
-            $csvImport = CsvImport::find($this->importId);
-            if ($csvImport) {
-                $csvImport->markAsFailed();
-                broadcast(new CsvImportProgressUpdated($csvImport))->toOthers();
-            }
-        });
+        $this->csvImport->markAsFailed();
+        broadcast(new CsvImportProgressUpdated($this->csvImport))->toOthers();
 
         Log::error("Chunk {$this->chunkNumber} failed after {$this->tries} attempts", [
-            'import_id' => $this->importId,
+            'csv_import' => $this->csvImport,
             'exception' => $exception->getMessage()
         ]);
     }

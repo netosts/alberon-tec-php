@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\CsvImport;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -15,6 +16,6 @@ class ContactsCsvImported
     public function __construct(
         public string $filePath,
         public array $validationRules,
-        public int $importId
+        public CsvImport $csvImport
     ) {}
 }

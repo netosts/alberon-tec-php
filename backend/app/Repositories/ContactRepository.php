@@ -22,6 +22,7 @@ class ContactRepository implements Contracts\IContactRepository
       'email' => $collectData->get('email'),
       'phone' => $collectData->get('phone'),
       'birthdate' => $collectData->get('birthdate'),
+      'csv_import_id' => $collectData->get('csv_import_id'),
     ]);
 
     return $contact->toArray();
@@ -30,5 +31,10 @@ class ContactRepository implements Contracts\IContactRepository
   public function isEmailDuplicate(string $email): bool
   {
     return $this->model->where('email', $email)->exists();
+  }
+
+  public function getExistingEmails(array $emails)
+  {
+    return $this->model->whereIn('email', $emails)->pluck('email')->flip();
   }
 }

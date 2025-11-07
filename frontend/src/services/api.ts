@@ -6,7 +6,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
   },
 })
 
@@ -39,7 +38,7 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 500) {
-      console.error('Server error:', error.response.data)
+      // console.error('Server error:', error.response.data)
     }
 
     return Promise.reject(error)

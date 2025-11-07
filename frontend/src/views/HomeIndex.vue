@@ -29,7 +29,7 @@ const { progress, stats, status, subscribeToImport, processedChunks, totalChunks
 const showResults = (data: any) => {
   status.value = CsvImportStatus.PROCESSING
   progress.value = 0
-  // Subscribe immediately when we get the import_id
+
   if (data.import_id) {
     subscribeToImport(data.import_id)
   }

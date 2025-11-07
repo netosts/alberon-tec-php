@@ -22,10 +22,25 @@ A Laravel + Vue.js application for importing and managing contacts from CSV file
 
 2. **Backend setup**
 
+   Go to the `backend` directory and install dependencies:
+
    ```bash
    cd backend
    cp .env.example .env
+   composer install
+   ```
+
+   After installing dependencies, let's start sail:
+
+   ```bash
    ./vendor/bin/sail up -d
+   ```
+
+   **If face issues with failing to bind ports, try stopping any services using those ports or change the ports in the `.env` file.**
+
+   When sail is up and running, run the following commands:
+
+   ```bash
    ./vendor/bin/sail artisan migrate
    ./vendor/bin/sail artisan queue:work &
    ./vendor/bin/sail artisan reverb:start &

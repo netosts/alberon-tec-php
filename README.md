@@ -50,6 +50,7 @@ A Laravel + Vue.js application for importing and managing contacts from CSV file
 
    ```bash
    cd frontend
+   cp .env.example .env
    npm install
    npm run dev
    ```

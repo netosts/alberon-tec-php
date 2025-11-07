@@ -55,50 +55,13 @@
     <div v-if="isError && !isProcessing" class="space-y-3 mb-6">
       <p class="text-sm text-slate-400 font-semibold">Common Issues:</p>
       <div class="space-y-2">
-        <div class="flex items-start gap-3 rounded-lg bg-slate-700/30 p-3">
-          <svg class="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <span class="text-sm text-slate-300">Check that all rows have valid email addresses</span>
-        </div>
-        <div class="flex items-start gap-3 rounded-lg bg-slate-700/30 p-3">
-          <svg class="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <span class="text-sm text-slate-300"
-            >Verify that required fields (name, email) are present</span
-          >
-        </div>
-        <div class="flex items-start gap-3 rounded-lg bg-slate-700/30 p-3">
-          <svg class="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <span class="text-sm text-slate-300">Ensure date formats are correct (YYYY-MM-DD)</span>
-        </div>
-        <div class="flex items-start gap-3 rounded-lg bg-slate-700/30 p-3">
-          <svg class="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <span class="text-sm text-slate-300"
-            >Ensure phone formats are correct (XXX-XXX-XXXX)</span
-          >
-        </div>
+        <ContactImportIssueItem
+          v-for="(item, itemId) in issueItems"
+          :key="itemId"
+          :text="item.text"
+          :iconName="item.iconName"
+          :iconClass="item.iconClass"
+        />
       </div>
     </div>
 
@@ -115,8 +78,9 @@
 <script setup lang="ts">
 import type { CsvImportDataStats } from '@/composables/useCsvImport'
 import { CsvImportStatus } from '@/enums/csv-import.enum'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import ContactImportSummaryTitle from './ContactImportSummaryTitle.vue'
+import ContactImportIssueItem from './ContactImportIssueItem.vue'
 
 const props = defineProps<{
   status: CsvImportStatus
@@ -129,6 +93,34 @@ const props = defineProps<{
 const emit = defineEmits<{
   reset: []
 }>()
+
+const issueItems = ref([
+  {
+    text: 'Check that all rows have valid email addresses (e.g., user@example.com)',
+    iconName: 'exclamation-circle',
+    iconClass: 'text-red-400',
+  },
+  {
+    text: 'Verify that the name field is present and not empty (max 255 characters)',
+    iconName: 'exclamation-circle',
+    iconClass: 'text-red-400',
+  },
+  {
+    text: 'Ensure phone numbers are in international format (e.g., +1-555-123-4567, (555) 123-4567)',
+    iconName: 'exclamation-circle',
+    iconClass: 'text-red-400',
+  },
+  {
+    text: 'Ensure birthdates are valid dates in the past (e.g., 1990-01-15)',
+    iconName: 'exclamation-circle',
+    iconClass: 'text-red-400',
+  },
+  {
+    text: 'Duplicate email addresses will be automatically skipped',
+    iconName: 'alert-triangle',
+    iconClass: 'text-orange-400',
+  },
+])
 
 const isError = computed(() => {
   return props.stats.errors && Number(props.stats.errors) > 0

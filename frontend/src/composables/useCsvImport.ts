@@ -58,12 +58,10 @@ export function useCsvImport() {
 
   const subscribeToImport = (importId: number) => {
     const echo = initializeEcho()
-    console.log(`Subscribing to import ${importId}`)
 
     const channel = echo.channel(`csv-import.${importId}`)
 
     channel.listen('.progress.updated', (data: CsvImportData) => {
-      console.log('Received progress update:', data)
       progress.value = data.progress
       stats.value = data.stats
       status.value = data.status

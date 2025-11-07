@@ -2,18 +2,18 @@
   <div class="rounded-xl border border-slate-700 bg-slate-800/50 p-8 backdrop-blur-sm">
     <h2 class="mb-6 text-xl font-bold text-white">Imported Contacts</h2>
 
-    <div v-if="pagination.data?.length === 0" class="py-12 text-center">
+    <div v-if="contacts?.length === 0" class="py-12 text-center">
       <p class="text-slate-400">No contacts found</p>
     </div>
 
     <div v-else class="space-y-3">
       <div
-        v-for="contact in pagination.data!!"
+        v-for="contact in contacts"
         :key="contact.id"
         class="flex items-center gap-4 rounded-lg border border-slate-700/50 bg-slate-700/20 p-4 transition-colors hover:bg-slate-700/40"
       >
         <img
-          :src="`https://www.gravatar.com/avatar/${hashEmail(contact.email!!)}?d=identicon&s=48`"
+          :src="`https://www.gravatar.com/avatar/${useHash(contact.email!!)}?d=identicon&s=48`"
           :alt="contact.name ?? 'Contact Avatar'"
           class="h-12 w-12 rounded-full"
         />
@@ -35,7 +35,7 @@
       </p>
       <div class="flex gap-2">
         <button
-          @click="$emit('page-change', pagination.current_page - 1)"
+          @click="changePage(pagination.current_page - 1)"
           :disabled="pagination.current_page === 1"
           class="rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -45,7 +45,7 @@
           <button
             v-for="page in visiblePages"
             :key="page"
-            @click="$emit('page-change', page)"
+            @click="changePage(page)"
             :class="[
               'rounded-lg px-3 py-2 font-semibold transition-colors',
               page === pagination.current_page
@@ -57,7 +57,7 @@
           </button>
         </div>
         <button
-          @click="$emit('page-change', pagination.current_page + 1)"
+          @click="changePage(pagination.current_page + 1)"
           :disabled="pagination.current_page === pagination.last_page"
           class="rounded-lg bg-slate-700 px-4 py-2 text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -71,33 +71,26 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useFormatDate } from '@/composables/useDate'
-import md5 from 'md5'
 import type { IContact } from '@/types/contact'
 import type { IPagination } from '@/types/pagination'
 import { getContactsService } from '@/services/home/homeApi'
 import { CsvImportStatus } from '@/enums/csv-import.enum'
+import { useHash } from '@/composables/useHash'
 
 const props = defineProps<{
   status: CsvImportStatus
 }>()
 
-defineEmits<{
-  'page-change': [page: number]
-}>()
+const contacts = ref<IContact[]>([])
 
-const pagination = ref<IPagination<IContact[]>>({
+const pagination = ref<IPagination>({
   current_page: 1,
   last_page: 1,
   per_page: 10,
   total: 0,
   from: 0,
   to: 0,
-  data: [],
 })
-
-const hashEmail = (email: string): string => {
-  return md5(email.toLowerCase().trim())
-}
 
 // Show max 7 page buttons
 const visiblePages = computed(() => {
@@ -134,9 +127,24 @@ const visiblePages = computed(() => {
   return pages
 })
 
+const changePage = (page: number) => {
+  if (page !== pagination.value.current_page) {
+    pagination.value.current_page = page
+    getPagination()
+  }
+}
+
 const getPagination = () => {
-  getContactsService().then(({ data: { data } }) => {
-    pagination.value = data
+  getContactsService(pagination.value).then(({ data: { data } }) => {
+    contacts.value = data.data
+    pagination.value = {
+      current_page: data.current_page,
+      last_page: data.last_page,
+      per_page: data.per_page,
+      total: data.total,
+      from: data.from,
+      to: data.to,
+    }
   })
 }
 

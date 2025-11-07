@@ -1,9 +1,9 @@
-export interface IPagination<T> {
+export interface IPagination<T = unknown> {
   current_page: number
   last_page: number
   per_page: number
   total: number
   from: number
   to: number
-  data: T
+  data?: T
 }

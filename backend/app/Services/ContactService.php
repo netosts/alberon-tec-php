@@ -12,7 +12,10 @@ class ContactService implements Contracts\IContactService
 
   public function getPaginated(Request $request)
   {
-    return Contact::orderBy('created_at', 'desc')->paginate(15);
+    $perPage = $request->input('per_page', 10);
+
+    return Contact::orderBy('created_at', 'desc')
+      ->paginate($perPage);
   }
 
   public function importContactsFromCsv(Request $request)

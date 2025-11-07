@@ -1,3 +1,4 @@
+import type { IPagination } from '@/types/pagination'
 import api from '../api'
 
 export const uploadCsvContactService = (data: FormData) => {
@@ -8,6 +9,11 @@ export const uploadCsvContactService = (data: FormData) => {
   })
 }
 
-export const getContactsService = () => {
-  return api.get('/contacts')
+export const getContactsService = (pagination: IPagination) => {
+  return api.get('/contacts', {
+    params: {
+      page: pagination.current_page,
+      per_page: pagination.per_page,
+    },
+  })
 }
